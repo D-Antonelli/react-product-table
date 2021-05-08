@@ -2,9 +2,6 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 
-/* I start from top to bottom as this is a small application */
-/* In larger applications, starting from small to complex is preferable, with tests */
-/* For start, no STATEs. Only static code passing props*/
 function ProductCategoryRow({ category }) {
   return (
     <tr>
@@ -13,42 +10,37 @@ function ProductCategoryRow({ category }) {
   );
 }
 
-function ProductRow({ name, price, stocked }) {
+function ProductRow({ product }) {
+  const name = product.stocked? product.name : <span style={{color: "red"}}>{product.name}</span>
   return (
     <tr>
-      <td style={!stocked ? { color: "red" } : { color: "black" }}>{name}</td>
-      <td>{price}</td>
+      <td>{name}</td>
+      <td>{product.price}</td>
     </tr>
   );
 }
 
-function ProductTable({ products }) {
+function ProductTable({ products, filterText, inStockOnly }) {
   let current = "";
-  const row = products.map((element, index) => {
-    const { category, name, price, stocked } = element;
-    if (category !== current) {
-      current = category;
-      return (
-        <>
-          <ProductCategoryRow category={category} key={category} />
-          <ProductRow
-            name={name}
-            price={price}
-            stocked={stocked}
-            key={index}
-          />
-        </>
-      );
-    }
-    return (
-      <ProductRow
-        name={name}
-        price={price}
-        stocked={stocked}
-        key={index}
-      />
-    );
-  });
+  let rows = [];
+
+   products.forEach((item) => {
+      if(!item.stocked && inStockOnly) {
+        return;
+      }
+
+      if(!item.name.toUpperCase().startsWith(filterText.toUpperCase())) {
+        return;
+      }
+
+      if(item.category !== current) {
+        current = item.category;
+        rows.push(<ProductCategoryRow category={item.category}/>)
+      }
+        rows.push(<ProductRow product={item}/>)
+    
+    }); 
+  
 
   return (
     <table>
@@ -58,42 +50,62 @@ function ProductTable({ products }) {
           <th>Price</th>
         </tr>
       </thead>
-      <tbody>{row}</tbody>
+      <tbody>{rows}</tbody>
     </table>
   );
 }
 
-function FilterableProductTable({ products }) {
-  return (
-    <div className="App">
-      <SearchBar />
-      <ProductTable products={products} />
-    </div>
-  );
-}
-
-function SearchBar() {
+function SearchBar({ onChange, filterText, inStock }) {
   return (
     <form className="form">
       <input
         className="form__text"
-        name="productSearch"
+        name="filter"
         type="text"
-        value=""
+        value={filterText}
         placeholder="Search..."
-        onChange=""
+        onChange={(e) => onChange(e)}
       />
       <label>
         Only show products in stock
         <input
           className="form__checkbox"
-          name="productsInStock"
+          name="inStock"
           type="checkbox"
-          checked=""
-          onChange=""
+          checked={inStock}
+          onChange={(e) => onChange(e)}
         />
       </label>
     </form>
+  );
+}
+
+function FilterableProductTable({ products }) {
+  const [filterText, setFilterText] = useState("");
+  const [inStock, setInStock] = useState(false);
+
+  function handleSearch(e) {
+    const target = e.target;
+    if (target.type === "text") {
+      setFilterText(target.value);
+    } else if (target.type === "checkbox") {
+      setInStock(target.checked);
+    }
+  }
+
+  return (
+    <div className="App">
+      <SearchBar
+        onChange={(e) => handleSearch(e)}
+        value={filterText}
+        inStockOnly={inStock}
+      />
+      <ProductTable
+        products={products}
+        filterText={filterText}
+        inStockOnly={inStock}
+      />
+    </div>
   );
 }
 
